@@ -35,7 +35,8 @@ private:
 	QString typeToDefaultValue(structure::Type type) const;
 	QString valueAssignmentCode(
 		structure::Value value,
-		bool ignoreCopy = false) const;
+		bool ignoreCopy = false,
+		const QString& name = QString()) const;
 
 	bool writeHeaderRequiredIncludes();
 	bool writeHeaderStyleNamespace();
