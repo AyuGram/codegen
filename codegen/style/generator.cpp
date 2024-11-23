@@ -35,6 +35,20 @@ const auto kMustBeContrast = std::map<QString, QString>{
 	{ "windowBoldFg", "windowBg" },
 };
 
+const auto kWideMultiplicable = std::map<QString, QString>{
+	{"msgMaxWidth", "1.0"},
+	{"historyGroupWidthMax", "1.0"},
+	{"msgServicePhotoWidth", "1.0"},
+	// tied to `msgMaxWidth` (should have the same mult, or previews would look bad)
+	{"maxMediaSize", "1.0"},
+	{"maxGifSize", "0.6"},
+	{"maxStickerSize", "0.6"},
+	{"maxVideoMessageSize", "0.75"},
+	{"maxAnimatedEmojiSize", "0.6"},
+	{"maxWallPaperWidth", "1.0"},
+	{"maxWallPaperHeight", "1.0"},
+};
+
 char hexChar(uchar ch) {
 	if (ch < 10) {
 		return '0' + ch;
@@ -286,7 +300,8 @@ QString Generator::typeToDefaultValue(structure::Type type) const {
 // Empty result means an error.
 QString Generator::valueAssignmentCode(
 		structure::Value value,
-		bool ignoreCopy) const {
+		bool ignoreCopy,
+		const QString& name) const {
 	auto copy = value.copyOf();
 	if (!ignoreCopy && !copy.isEmpty()) {
 		return "st::" + copy.back();
@@ -297,7 +312,12 @@ QString Generator::valueAssignmentCode(
 	case Tag::Int: return QString("%1").arg(value.Int());
 	case Tag::Bool: return QString(value.Bool() ? "true" : "false");
 	case Tag::Double: return QString("%1").arg(value.Double());
-	case Tag::Pixels: return pxValueName(value.Int());
+	case Tag::Pixels: {
+		if (kWideMultiplicable.contains(name)) {
+			return QString("AyuUiSettings::getWideMultiplied(%1, %2)").arg(pxValueName(value.Int())).arg(kWideMultiplicable.at(name));
+		}
+		return pxValueName(value.Int());
+	} break;
 	case Tag::String: return QString("QString::fromUtf8(%1)").arg(stringToEncodedString(value.String()));
 	case Tag::Color: {
 		auto v(value.Color());
@@ -316,6 +336,9 @@ QString Generator::valueAssignmentCode(
 	} break;
 	case Tag::Size: {
 		auto v(value.Size());
+		if (kWideMultiplicable.contains(name)) {
+			return QString("{ AyuUiSettings::getWideMultiplied(%1, %3), AyuUiSettings::getWideMultiplied(%2, %3) }").arg(pxValueName(v.width), pxValueName(v.height)).arg(kWideMultiplicable.at(name));
+		}
 		return QString("{ %1, %2 }").arg(pxValueName(v.width), pxValueName(v.height));
 	} break;
 	case Tag::Align: return QString("style::al_%1").arg(value.String().c_str());
@@ -639,6 +662,18 @@ bool Generator::writeIncludesInSource() {
 	auto result = module_.enumIncludes(collector);
 	for (const auto &base : includes) {
 		source_->include("styles/" + base + ".h");
+	}
+	const auto ayuIncluded = !module_.enumVariables([=](const Variable &value) -> bool
+	{
+		for (const auto &name : value.name) {
+			if (kWideMultiplicable.contains(name)) {
+				return false;
+			}
+		}
+		return true;
+	});
+	if (ayuIncluded) {
+		source_->include("ayu/ayu_ui_settings.h");
 	}
 	source_->newline();
 	return result;
@@ -988,7 +1023,7 @@ void init_" << baseName_ << "(int scale) {\n\
 		source_->stream() << "\t_palette.finalize();\n";
 	} else if (!module_.enumVariables([&](const Variable &variable) -> bool {
 		auto name = variable.name.back();
-		auto value = valueAssignmentCode(variable.value);
+		auto value = valueAssignmentCode(variable.value, false, variable.name.first());
 		if (value.isEmpty()) {
 			return false;
 		}
