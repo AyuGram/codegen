@@ -773,7 +773,8 @@ structure::Value ParsedFile::readFontValue() {
 			structure::Value family, size;
 			do {
 				if (auto formatToken = file_.getToken(BasicType::Name)) {
-					if (tokenValue(formatToken) == "bold") {
+					if (tokenValue(formatToken) == "bold"
+						|| tokenValue(formatToken) == "semibold") {
 						flags |= structure::data::font::Bold;
 						continue;
 					} else if (tokenValue(formatToken) == "italic") {
@@ -781,9 +782,6 @@ structure::Value ParsedFile::readFontValue() {
 						continue;
 					} else if (tokenValue(formatToken) == "underline") {
 						flags |= structure::data::font::Underline;
-						continue;
-					} else if (tokenValue(formatToken) == "semibold") {
-						flags |= structure::data::font::Semibold;
 						continue;
 					} else {
 						file_.putBack();
@@ -851,6 +849,7 @@ structure::Value ParsedFile::readCopyValue() {
 		structure::FullName name = { tokenValue(copyName) };
 		if (auto variable = module_->findVariable(name)) {
 			auto result = variable->value;
+			auto copyOf = variable->name;
 			while (file_.getToken(BasicType::Dot)) {
 				if (auto fieldName = file_.getToken(BasicType::Name)) {
 					auto fieldNameStr = tokenValue(fieldName);
@@ -900,6 +899,7 @@ structure::Value ParsedFile::readCopyValue() {
 					for (const auto &field : *fields) {
 						if (field.variable.name == fieldFullName) {
 							result = field.variable.value;
+							copyOf.push_back(fieldNameStr);
 							found = true;
 							break;
 						}
@@ -916,7 +916,7 @@ structure::Value ParsedFile::readCopyValue() {
 					return {};
 				}
 			}
-			return result.makeCopy(variable->name);
+			return result.makeCopy(copyOf);
 		}
 		file_.putBack();
 	}
