@@ -449,8 +449,8 @@ public:\n\
 	static constexpr auto kCount = " << (2 + module_.variablesCount()) << ";\n\
 	static int32 Checksum();\n\
 \n\
-	inline const color &transparent() const { return _colors[0]; }; // special color\n\
-	inline const color &white() const { return _colors[1]; }; // special color\n";
+	inline constexpr const color &transparent() const { return _colors[0]; }; // special color\n\
+	inline constexpr const color &white() const { return _colors[1]; }; // special color\n";
 
 	auto indexInPalette = 2;
 	if (!module_.enumVariables([&](const Variable &variable) -> bool {
@@ -460,7 +460,7 @@ public:\n\
 		}
 
 		auto index = (indexInPalette++);
-		header_->stream() << "\tinline const color &" << name << "() const { return _colors[" << index << "]; };\n";
+		header_->stream() << "\tinline constexpr const color &" << name << "() const { return _colors[" << index << "]; };\n";
 		return true;
 	})) return false;
 	const auto count = indexInPalette;
