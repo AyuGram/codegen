@@ -937,12 +937,9 @@ bool Generator::writeVariableInit() {
 	if (!collectUniqueValues()) {
 		return false;
 	}
-	bool hasUniqueValues = (!pxValues_.isEmpty() || !fontFamilies_.isEmpty() || !iconMasks_.isEmpty());
+	bool hasUniqueValues = (!fontFamilies_.isEmpty() || !iconMasks_.isEmpty());
 	if (hasUniqueValues) {
 		source_->pushNamespace();
-		if (!writePxValuesInit()) {
-			return false;
-		}
 		if (!writeFontFamiliesInit()) {
 			return false;
 		}
@@ -975,8 +972,13 @@ void init_" << baseName_ << "(int scale) {\n\
 	}
 
 	if (!pxValues_.isEmpty() || !fontFamilies_.isEmpty()) {
-		if (!pxValues_.isEmpty()) {
-			source_->stream() << "\tinitPxValues(scale);\n";
+		for (auto i = pxValues_.cbegin(), e = pxValues_.cend(); i != e; ++i) {
+			const auto value = i.key();
+			if (!value) {
+				source_->stream() << "\tconstexpr int " << pxValueName(value) << " = 0;\n";
+			} else {
+				source_->stream() << "\tconst int " << pxValueName(value) << " = ConvertScale(" << value << ", scale);\n";
+			}
 		}
 		if (!fontFamilies_.isEmpty()) {
 			source_->stream() << "\tinitFontFamilies();\n";
@@ -998,32 +1000,6 @@ void init_" << baseName_ << "(int scale) {\n\
 		return true;
 	})) {
 		return false;
-	}
-	source_->stream() << "\
-}\n\n";
-	return true;
-}
-
-bool Generator::writePxValuesInit() {
-	if (pxValues_.isEmpty()) {
-		return true;
-	}
-
-	for (auto i = pxValues_.cbegin(), e = pxValues_.cend(); i != e; ++i) {
-		if (!i.key()) {
-			source_->stream() << "constexpr int " << pxValueName(i.key()) << " = 0;\n";
-		} else {
-			source_->stream() << "int " << pxValueName(i.key()) << " = " << i.key() << ";\n";
-		}
-	}
-	source_->stream() << "\
-void initPxValues(int scale) {\n";
-	for (auto it = pxValues_.cbegin(), e = pxValues_.cend(); it != e; ++it) {
-		auto value = it.key();
-		if (!value) {
-			continue;
-		}
-		source_->stream() << "\t" << pxValueName(value) << " = ConvertScale(" << value << ", scale);\n";
 	}
 	source_->stream() << "\
 }\n\n";
