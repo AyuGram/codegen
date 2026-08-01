@@ -1010,12 +1010,19 @@ bool Generator::writePxValuesInit() {
 	}
 
 	for (auto i = pxValues_.cbegin(), e = pxValues_.cend(); i != e; ++i) {
-		source_->stream() << "int " << pxValueName(i.key()) << " = " << i.key() << ";\n";
+		if (!i.key()) {
+			source_->stream() << "constexpr int " << pxValueName(i.key()) << " = 0;\n";
+		} else {
+			source_->stream() << "int " << pxValueName(i.key()) << " = " << i.key() << ";\n";
+		}
 	}
 	source_->stream() << "\
 void initPxValues(int scale) {\n";
 	for (auto it = pxValues_.cbegin(), e = pxValues_.cend(); it != e; ++it) {
 		auto value = it.key();
+		if (!value) {
+			continue;
+		}
 		source_->stream() << "\t" << pxValueName(value) << " = ConvertScale(" << value << ", scale);\n";
 	}
 	source_->stream() << "\
