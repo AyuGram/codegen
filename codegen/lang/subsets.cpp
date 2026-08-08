@@ -193,10 +193,11 @@ void Scan(const QByteArray &content, Scanned &result) {
 	const auto data = content.constData();
 	const auto size = content.size();
 	for (auto i = qsizetype(0); i + 4 < size; ++i) {
-		if (data[i] != 'l'
-			|| data[i + 1] != 'n'
-			|| data[i + 2] != 'g'
-			|| data[i + 3] != '_'
+		const auto isKeyPrefix = (data[i] == 'l' && data[i + 1] == 'n'
+			&& data[i + 2] == 'g' && data[i + 3] == '_')
+			|| (data[i] == 'a' && data[i + 1] == 'y'
+				&& data[i + 2] == 'u' && data[i + 3] == '_');
+		if (!isKeyPrefix
 			|| (i > 0 && IsIdentifierChar(data[i - 1]))) {
 			continue;
 		}
